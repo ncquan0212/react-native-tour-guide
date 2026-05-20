@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Dimensions, Modal, Platform, StatusBar, findNodeHandle } from 'react-native';
+import { Dimensions, Platform, StatusBar, View, findNodeHandle } from 'react-native';
 
 import { useTourGuide } from './TourGuideContext';
 import SpotlightOverlay from './SpotlightOverlay';
@@ -208,9 +208,7 @@ const TourGuideOverlay: React.FC = () => {
 
         // How much space tooltip + arrow + gap needs
         const tooltipSpace =
-          ESTIMATED_TOOLTIP_HEIGHT +
-          (config?.tooltipOffset ?? 8) +
-          (config?.triangleSize ?? 12);
+          ESTIMATED_TOOLTIP_HEIGHT + (config?.tooltipOffset ?? 8) + (config?.triangleSize ?? 12);
 
         const targetTop = adjustedY;
         const targetBottom = adjustedY + height;
@@ -225,8 +223,7 @@ const TourGuideOverlay: React.FC = () => {
         const spaceBelow = sh - targetBottom - bottomMargin;
 
         // Is the full target visible with comfortable margins?
-        const targetFullyVisible =
-          targetTop >= topMargin && targetBottom <= sh - bottomMargin;
+        const targetFullyVisible = targetTop >= topMargin && targetBottom <= sh - bottomMargin;
         // Does the tooltip fit on at least one side?
         const tooltipFits = spaceBelow >= tooltipSpace || spaceAbove >= tooltipSpace;
 
@@ -452,36 +449,32 @@ const TourGuideOverlay: React.FC = () => {
     screenHeight: screenDimensions.height,
     animationDuration: config?.animationDuration,
     onBackdropPress,
-    onSpotlightPress: currentStepData.onSpotlightPress,
+    onSpotlightPress: currentStepData.onSpotlightPress ?? skipTour,
+  };
+
+  if (!isActive) return null;
+
+  const overlayStyle = {
+    position: 'absolute' as const,
+    width: screenDimensions.width,
+    height: screenDimensions.height,
   };
 
   // Custom tooltip renderer
   if (config?.renderTooltip && targetLayout) {
     return (
-      <Modal
-        visible={isActive}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={skipTour}
-      >
+      <View style={overlayStyle} pointerEvents="box-none">
         <SpotlightOverlay {...spotlightProps} />
         {config.renderTooltip(tooltipProps)}
-      </Modal>
+      </View>
     );
   }
 
   return (
-    <Modal
-      visible={isActive}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={skipTour}
-    >
+    <View style={overlayStyle} pointerEvents="box-none">
       <SpotlightOverlay {...spotlightProps} />
       {targetLayout ? <Tooltip {...tooltipProps} /> : null}
-    </Modal>
+    </View>
   );
 };
 

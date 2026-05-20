@@ -77,7 +77,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
   screenHeight,
   animationDuration = 300,
   onBackdropPress,
-  onSpotlightPress,
+  // onSpotlightPress,
 }) => {
   const {
     overlayOpacity = 0.6,
@@ -259,9 +259,15 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
     usePathRendering ? renderPathCutout(fill, stroke, sw) : renderRectCutout(fill, stroke, sw);
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Backdrop press layer — behind everything */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={onBackdropPress}>
+    <View
+      style={{ position: 'absolute', width: screenWidth, height: screenHeight }}
+      pointerEvents="box-none"
+    >
+      {/* Visual overlay layer — no touch handling */}
+      <View
+        style={{ position: 'absolute', width: screenWidth, height: screenHeight }}
+        pointerEvents="none"
+      >
         {/* Optional: Masked blur effect */}
         {enableBlur && BlurView && MaskedView ? (
           <MaskedView
@@ -320,12 +326,15 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
             mask={`url(#${maskIds.spotlight})`}
           />
         </Svg>
-      </Pressable>
+      </View>
 
       {/* Pulse border overlay */}
       {enablePulse ? (
         <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: pulseOpacity }]}
+          style={[
+            { position: 'absolute', width: screenWidth, height: screenHeight },
+            { opacity: pulseOpacity },
+          ]}
           pointerEvents="none"
         >
           <Svg height={screenHeight} width={screenWidth}>
@@ -334,19 +343,45 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
         </Animated.View>
       ) : null}
 
-      {/* Spotlight press area — on top of backdrop, over the cutout */}
-      {onSpotlightPress ? (
-        <Pressable
-          style={{
-            position: 'absolute',
-            left: bounds.x,
-            top: bounds.y,
-            width: bounds.width,
-            height: bounds.height,
-          }}
-          onPress={onSpotlightPress}
-        />
-      ) : null}
+      {/* Backdrop touch frame — 4 Pressables around the cutout */}
+      {/* TOP */}
+      <Pressable
+        style={{ position: 'absolute', left: 0, top: 0, right: 0, height: bounds.y }}
+        onPress={onBackdropPress}
+      />
+      {/* BOTTOM */}
+      <Pressable
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: bounds.y + bounds.height,
+          right: 0,
+          bottom: 0,
+        }}
+        onPress={onBackdropPress}
+      />
+      {/* LEFT */}
+      <Pressable
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: bounds.y,
+          width: bounds.x,
+          height: bounds.height,
+        }}
+        onPress={onBackdropPress}
+      />
+      {/* RIGHT */}
+      <Pressable
+        style={{
+          position: 'absolute',
+          left: bounds.x + bounds.width,
+          top: bounds.y,
+          right: 0,
+          height: bounds.height,
+        }}
+        onPress={onBackdropPress}
+      />
     </View>
   );
 };
