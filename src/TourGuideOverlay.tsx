@@ -458,6 +458,8 @@ const TourGuideOverlay: React.FC = () => {
     position: 'absolute' as const,
     width: screenDimensions.width,
     height: screenDimensions.height,
+    zIndex: 9999,
+    elevation: 9999,
   };
 
   // Custom tooltip renderer
