@@ -1,5 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Dimensions, Platform, StatusBar, View, findNodeHandle } from 'react-native';
+import { Dimensions, Platform, StatusBar, findNodeHandle } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const AnimatedView = Animated.View as React.ComponentType<any>;
 
 import { useTourGuide } from './TourGuideContext';
 import SpotlightOverlay from './SpotlightOverlay';
@@ -454,29 +458,45 @@ const TourGuideOverlay: React.FC = () => {
 
   if (!isActive) return null;
 
-  const overlayStyle = {
-    position: 'absolute' as const,
-    width: screenDimensions.width,
-    height: screenDimensions.height,
-    zIndex: 9999,
-    elevation: 9999,
-  };
+  const duration = config?.animationDuration ?? 300;
 
   // Custom tooltip renderer
   if (config?.renderTooltip && targetLayout) {
     return (
-      <View style={overlayStyle} pointerEvents="box-none">
+      <AnimatedView
+        entering={FadeIn.duration(duration)}
+        exiting={FadeOut.duration(duration)}
+        style={{
+          position: 'absolute',
+          width: screenDimensions.width,
+          height: screenDimensions.height,
+          zIndex: 9999,
+          elevation: 9999,
+        }}
+        pointerEvents="box-none"
+      >
         <SpotlightOverlay {...spotlightProps} />
         {config.renderTooltip(tooltipProps)}
-      </View>
+      </AnimatedView>
     );
   }
 
   return (
-    <View style={overlayStyle} pointerEvents="box-none">
+    <AnimatedView
+      entering={FadeIn.duration(duration)}
+      exiting={FadeOut.duration(duration)}
+      style={{
+        position: 'absolute',
+        width: screenDimensions.width,
+        height: screenDimensions.height,
+        zIndex: 9999,
+        elevation: 9999,
+      }}
+      pointerEvents="box-none"
+    >
       <SpotlightOverlay {...spotlightProps} />
       {targetLayout ? <Tooltip {...tooltipProps} /> : null}
-    </View>
+    </AnimatedView>
   );
 };
 
