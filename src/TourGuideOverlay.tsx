@@ -73,7 +73,18 @@ const measureElement = (
  * }
  * ```
  */
-const TourGuideOverlay: React.FC = () => {
+export interface TourGuideOverlayProps {
+  /**
+   * Explicit screen size override (e.g. the full edge-to-edge dimensions tracked by the app).
+   * When provided (> 0), these take precedence over the internal `Dimensions.get('window')`
+   * measurement — which on Android is reduced by the status/navigation bar — so the backdrop
+   * covers the entire screen on edge-to-edge / tall Android devices.
+   */
+  screenWidth?: number;
+  screenHeight?: number;
+}
+
+const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screenHeight }) => {
   const {
     isActive,
     isPaused,
@@ -87,13 +98,21 @@ const TourGuideOverlay: React.FC = () => {
     skipTour,
   } = useTourGuide();
 
-  // Track screen dimensions for orientation changes
-  const [screenDimensions, setScreenDimensions] = useState<{ width: number; height: number }>(
+  // Track window dimensions for orientation changes (fallback when no explicit size is provided)
+  const [windowDimensions, setWindowDimensions] = useState<{ width: number; height: number }>(
     () => {
       const { width, height } = Dimensions.get('window');
       return { width, height };
     }
   );
+
+  // Effective screen size: prefer app-provided full-screen dimensions, else fall back to window.
+  // `Dimensions.get('window')` on Android excludes the status/navigation bar, so on edge-to-edge
+  // it leaves the system-bar strip uncovered — passing the real full size fixes that.
+  const screenDimensions = {
+    width: screenWidth && screenWidth > 0 ? screenWidth : windowDimensions.width,
+    height: screenHeight && screenHeight > 0 ? screenHeight : windowDimensions.height,
+  };
   const currentStepData = activeSteps[currentStep];
 
   // Refs for cleanup
@@ -106,7 +125,7 @@ const TourGuideOverlay: React.FC = () => {
     const subscription = Dimensions.addEventListener(
       'change',
       ({ window: win }: { window: { width: number; height: number } }) => {
-        setScreenDimensions(win);
+        setWindowDimensions(win);
         // Re-measure current target after orientation change
         if (isActive && currentStepData?.targetRef?.current) {
           setTargetLayout(null);
