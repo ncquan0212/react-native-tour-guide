@@ -10,7 +10,7 @@ import SpotlightOverlay from './SpotlightOverlay';
 import Tooltip from './Tooltip';
 import { validateRef, computeTooltipPosition, extractBorderRadius } from './utils';
 import { announceStep } from './accessibility';
-import type { BackdropBehavior } from './types';
+import type { BackdropBehavior, SpotlightTarget } from './types';
 
 const isWeb = Platform.OS === 'web';
 
@@ -114,6 +114,9 @@ const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screen
     height: screenHeight && screenHeight > 0 ? screenHeight : windowDimensions.height,
   };
   const currentStepData = activeSteps[currentStep];
+
+  // Measured layouts for the step's extra (view-only) cutouts — multi-hole spotlight.
+  const [extraLayouts, setExtraLayouts] = useState<SpotlightTarget[]>([]);
 
   // Refs for cleanup
   const delayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -371,6 +374,54 @@ const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screen
     return undefined;
   }, [isActive, currentStepData, targetLayout, nextStep]);
 
+  // --- Measure extra (view-only) cutouts for multi-hole spotlight ---
+  useEffect(() => {
+    const refs = currentStepData?.extraTargetRefs;
+    if (!isActive || isPaused || !refs || refs.length === 0) {
+      setExtraLayouts([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const measureAll = (retry = 0) => {
+      const results: SpotlightTarget[] = [];
+      let pending = refs.length;
+      let anyZero = false;
+      const finish = () => {
+        if (cancelled) return;
+        if (anyZero && retry < MAX_MEASURE_RETRIES) {
+          setTimeout(() => measureAll(retry + 1), MEASURE_RETRY_DELAY);
+          return;
+        }
+        setExtraLayouts(results.filter(Boolean) as SpotlightTarget[]);
+      };
+      refs.forEach((ref, i) => {
+        const canMeasure =
+          ref?.current && (isWeb || typeof ref.current.measureInWindow === 'function');
+        if (!canMeasure) {
+          pending -= 1;
+          if (pending === 0) finish();
+          return;
+        }
+        measureElement(ref as { current: Record<string, unknown> }, (x, y, width, height) => {
+          if (width > 0 && height > 0) {
+            const statusBarHeight =
+              !isWeb && Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+            results[i] = { x, y: y + statusBarHeight, width, height };
+          } else {
+            anyZero = true;
+          }
+          pending -= 1;
+          if (pending === 0) finish();
+        });
+      });
+    };
+    const t = setTimeout(() => measureAll(), currentStepData?.delayBefore ?? 100);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [isActive, isPaused, currentStep, currentStepData]);
+
   if (!isActive || isPaused || !currentStepData) return null;
 
   // --- Backdrop behavior ---
@@ -465,6 +516,7 @@ const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screen
   // --- Shared spotlight props ---
   const spotlightProps = {
     target: targetLayout,
+    extraTargets: extraLayouts,
     padding: currentStepData.spotlightPadding,
     borderRadius: effectiveBorderRadius,
     styles: config?.spotlightStyles,

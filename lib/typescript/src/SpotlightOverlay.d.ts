@@ -3,6 +3,8 @@ import type { SpotlightTarget, SpotlightStyles } from './types';
 import type { SpotlightBorderRadius } from './shapes';
 export interface SpotlightOverlayProps {
     target: SpotlightTarget | null;
+    /** Extra view-only cutouts punched into the same overlay (multi-hole spotlight). */
+    extraTargets?: SpotlightTarget[];
     padding?: number;
     borderRadius?: SpotlightBorderRadius;
     styles?: SpotlightStyles;

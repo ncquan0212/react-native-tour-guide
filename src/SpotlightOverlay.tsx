@@ -52,6 +52,8 @@ let maskIdCounter = 0;
 
 export interface SpotlightOverlayProps {
   target: SpotlightTarget | null;
+  /** Extra view-only cutouts punched into the same overlay (multi-hole spotlight). */
+  extraTargets?: SpotlightTarget[];
   padding?: number;
   borderRadius?: SpotlightBorderRadius;
   styles?: SpotlightStyles;
@@ -70,6 +72,7 @@ export interface SpotlightOverlayProps {
  */
 const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
   target,
+  extraTargets,
   padding = 0,
   borderRadius: customBorderRadius,
   styles = DEFAULT_SPOTLIGHT_STYLES,
@@ -122,6 +125,13 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
   const shapeResult = useMemo(
     () => (target ? computeShape(target, padding, customBorderRadius) : null),
     [target, padding, customBorderRadius]
+  );
+
+  // Extra view-only cutouts (multi-hole). Static (no animation) — same padding/radius
+  // as the primary target.
+  const extraShapes = useMemo(
+    () => (extraTargets ?? []).map((t) => computeShape(t, padding, customBorderRadius)),
+    [extraTargets, padding, customBorderRadius]
   );
 
   // Bounding box for press overlay positioning
@@ -258,6 +268,27 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
   const renderCutout = (fill: string, stroke?: string, sw?: number) =>
     usePathRendering ? renderPathCutout(fill, stroke, sw) : renderRectCutout(fill, stroke, sw);
 
+  // Static cutouts for the extra targets (multi-hole). Keyed so they can sit in an array.
+  const renderExtraCutouts = (fill: string, stroke?: string, sw?: number) =>
+    extraShapes.map((shape, i) =>
+      shape.kind === 'path' ? (
+        <Path key={`extra-${i}`} d={shape.d} fill={fill} stroke={stroke} strokeWidth={sw} />
+      ) : (
+        <Rect
+          key={`extra-${i}`}
+          x={shape.x}
+          y={shape.y}
+          width={shape.width}
+          height={shape.height}
+          rx={shape.rx}
+          ry={shape.ry}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={sw}
+        />
+      )
+    );
+
   return (
     <View
       style={{ position: 'absolute', width: screenWidth, height: screenHeight }}
@@ -278,6 +309,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
                   <Mask id={maskIds.inverse}>
                     <Rect x="0" y="0" width={screenWidth} height={screenHeight} fill="white" />
                     {renderCutout('black')}
+                    {renderExtraCutouts('black')}
                   </Mask>
                 </Defs>
                 <Rect
@@ -314,6 +346,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
             <Mask id={maskIds.spotlight}>
               <Rect x="0" y="0" width={screenWidth} height={screenHeight} fill="white" />
               {renderCutout('black')}
+              {renderExtraCutouts('black')}
             </Mask>
           </Defs>
           <Rect
@@ -339,6 +372,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({
         >
           <Svg height={screenHeight} width={screenWidth}>
             {renderCutout('none', pulseColor, pulseWidth)}
+            {renderExtraCutouts('none', pulseColor, pulseWidth)}
           </Svg>
         </Animated.View>
       ) : null}

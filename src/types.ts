@@ -58,6 +58,14 @@ export interface TourStep {
   id: string;
   /** Reference to the component to highlight (optional for full-screen tooltips) */
   targetRef?: MeasurableRef;
+  /**
+   * Extra spotlight cutouts (view-only) rendered in the SAME dark overlay as the
+   * primary target — lets one step highlight several disjoint regions at once
+   * (e.g. a clue number + its cells). Each punches an additional hole in the
+   * backdrop but does NOT change the tap-frame, which stays around `targetRef`
+   * (so only the primary region is tap-through; extras are visual only).
+   */
+  extraTargetRefs?: MeasurableRef[];
   /** Title shown in the tooltip */
   title: string;
   /** Description text in the tooltip */
