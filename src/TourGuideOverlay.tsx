@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Dimensions, Platform, StatusBar, findNodeHandle } from 'react-native';
+import { Dimensions, Platform, findNodeHandle } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,6 +20,16 @@ const MEASURE_RETRY_DELAY = 100;
 /**
  * Cross-platform measurement helper.
  * Uses getBoundingClientRect on web, measureInWindow on native.
+ *
+ * Coordinates are used as-is — callers must NOT add `StatusBar.currentHeight` on
+ * Android. That compensation only made sense when the app did not draw behind the
+ * system bars: back then the window started below the status bar, so
+ * `measureInWindow` excluded it while the overlay covered the whole screen.
+ *
+ * Under edge-to-edge (the default since React Native 0.87, `edgeToEdgeEnabled=true`)
+ * the window spans the full screen, so `measureInWindow` already includes the status
+ * bar. Adding it again shifted every spotlight and tooltip down by exactly one status
+ * bar height.
  */
 const measureElement = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,10 +178,8 @@ const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screen
         currentStepData.targetRef as { current: Record<string, unknown> },
         (x: number, y: number, width: number, height: number) => {
           if (width > 0 && height > 0) {
-            const statusBarHeight =
-              !isWeb && Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
-            const adjustedY = y + statusBarHeight;
-            setTargetLayout({ x, y: adjustedY, width, height });
+            // No status-bar compensation: see note at `measureElement`.
+            setTargetLayout({ x, y, width, height });
             measureRetryCount.current = 0;
           } else if (retryCount < MAX_MEASURE_RETRIES) {
             // Element not laid out yet — retry
@@ -225,9 +233,8 @@ const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screen
           return;
         }
 
-        const statusBarHeight =
-          !isWeb && Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
-        const adjustedY = y + statusBarHeight;
+        // No status-bar compensation: see note at `measureElement`.
+        const adjustedY = y;
         const animated = stepScrollConfig?.animated ?? true;
         const extraOffset = stepScrollConfig?.offset ?? 0;
         const currentScrollOffset = getScrollOffset();
@@ -404,9 +411,8 @@ const TourGuideOverlay: React.FC<TourGuideOverlayProps> = ({ screenWidth, screen
         }
         measureElement(ref as { current: Record<string, unknown> }, (x, y, width, height) => {
           if (width > 0 && height > 0) {
-            const statusBarHeight =
-              !isWeb && Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
-            results[i] = { x, y: y + statusBarHeight, width, height };
+            // No status-bar compensation: see note at `measureElement`.
+            results[i] = { x, y, width, height };
           } else {
             anyZero = true;
           }
